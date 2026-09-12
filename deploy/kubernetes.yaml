@@ -1,0 +1,76 @@
+# Optional EKS extension. Replace IMAGE_DIGEST before applying.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: devsecops
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: devsecops-demo
+  namespace: devsecops
+spec:
+  replicas: 2
+  revisionHistoryLimit: 5
+  strategy:
+    type: RollingUpdate
+    rollingUpdate: {maxSurge: 1, maxUnavailable: 0}
+  selector:
+    matchLabels: {app: devsecops-demo}
+  template:
+    metadata:
+      labels: {app: devsecops-demo}
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile: {type: RuntimeDefault}
+      containers:
+        - name: app
+          image: IMAGE_DIGEST
+          ports: [{name: http, containerPort: 8080}, {name: management, containerPort: 8081}]
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: {drop: [ALL]}
+          resources:
+            requests: {cpu: 250m, memory: 512Mi}
+            limits: {cpu: '1', memory: 768Mi}
+          volumeMounts: [{name: tmp, mountPath: /tmp}]
+          startupProbe:
+            httpGet: {path: /actuator/health/liveness, port: management}
+            failureThreshold: 60
+            periodSeconds: 5
+          readinessProbe:
+            httpGet: {path: /actuator/health/readiness, port: management}
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: {path: /actuator/health/liveness, port: management}
+            periodSeconds: 10
+      volumes:
+        - name: tmp
+          emptyDir: {medium: Memory, sizeLimit: 128Mi}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: devsecops-demo
+  namespace: devsecops
+spec:
+  selector: {app: devsecops-demo}
+  ports: [{name: http, port: 80, targetPort: http}]
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: devsecops-demo
+  namespace: devsecops
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels: {app: devsecops-demo}
