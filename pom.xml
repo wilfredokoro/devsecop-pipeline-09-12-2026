@@ -1,27 +1,137 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
-  <modelVersion>4.0.0</modelVersion>
-  <parent><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-parent</artifactId><version>3.5.16</version><relativePath/></parent>
-  <groupId>com.gavok</groupId><artifactId>devsecops-demo</artifactId><version>1.0.0</version>
-  <properties><java.version>21</java.version><jacoco.version>0.8.15</jacoco.version></properties>
-  <dependencies>
-    <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-web</artifactId></dependency>
-    <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-actuator</artifactId></dependency>
-    <dependency><groupId>io.micrometer</groupId><artifactId>micrometer-registry-prometheus</artifactId></dependency>
-    <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-test</artifactId><scope>test</scope></dependency>
-  </dependencies>
-  <build>
-    <finalName>devsecops-demo</finalName>
-    <plugins>
-      <plugin><groupId>org.springframework.boot</groupId><artifactId>spring-boot-maven-plugin</artifactId></plugin>
-      <plugin><groupId>org.jacoco</groupId><artifactId>jacoco-maven-plugin</artifactId><version>${jacoco.version}</version>
-        <executions>
-          <execution><goals><goal>prepare-agent</goal></goals></execution>
-          <execution><id>report</id><phase>verify</phase><goals><goal>report</goal></goals></execution>
-          <execution><id>coverage</id><phase>verify</phase><goals><goal>check</goal></goals>
-            <configuration><rules><rule><element>BUNDLE</element><limits><limit><counter>LINE</counter><value>COVEREDRATIO</value><minimum>0.80</minimum></limit></limits></rule></rules></configuration>
-          </execution>
-        </executions>
-      </plugin>
-    </plugins>
-  </build>
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="
+           http://maven.apache.org/POM/4.0.0
+           https://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>4.0.8</version>
+        <relativePath/>
+    </parent>
+
+    <groupId>com.gavok</groupId>
+    <artifactId>devsecops-demo</artifactId>
+    <version>1.0.0</version>
+    <packaging>jar</packaging>
+
+    <name>devsecops-demo</name>
+    <description>Gavok DevSecOps pipeline demonstration application</description>
+
+    <properties>
+        <java.version>21</java.version>
+
+        <!-- Override the Tomcat version managed by Spring Boot 4.0.8. -->
+        <tomcat.version>11.0.25</tomcat.version>
+
+        <jacoco.version>0.8.15</jacoco.version>
+
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+    </properties>
+
+    <dependencies>
+
+        <!-- Spring MVC REST endpoints and embedded Tomcat. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-webmvc</artifactId>
+        </dependency>
+
+        <!-- Application health and management endpoints. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+
+        <!-- Prometheus metrics. -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-registry-prometheus</artifactId>
+        </dependency>
+
+        <!-- Boot 4 MVC testing, including MockMvc and core test support. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-webmvc-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+    </dependencies>
+
+    <build>
+
+        <!-- Matches the JAR filename expected by your Dockerfile. -->
+        <finalName>devsecops-demo</finalName>
+
+        <plugins>
+
+            <!-- Packages the application as an executable Spring Boot JAR. -->
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+
+            <!-- Collects coverage, generates reports, and enforces the gate. -->
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>${jacoco.version}</version>
+
+                <executions>
+
+                    <execution>
+                        <id>prepare-agent</id>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                    </execution>
+
+                    <execution>
+                        <id>report</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                        <configuration>
+                            <formats>
+                                <format>HTML</format>
+                                <format>XML</format>
+                                <format>CSV</format>
+                            </formats>
+                        </configuration>
+                    </execution>
+
+                    <execution>
+                        <id>coverage</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                        <configuration>
+                            <rules>
+                                <rule>
+                                    <element>BUNDLE</element>
+                                    <limits>
+                                        <limit>
+                                            <counter>LINE</counter>
+                                            <value>COVEREDRATIO</value>
+                                            <minimum>0.80</minimum>
+                                        </limit>
+                                    </limits>
+                                </rule>
+                            </rules>
+                        </configuration>
+                    </execution>
+
+                </executions>
+            </plugin>
+
+        </plugins>
+    </build>
+
 </project>
