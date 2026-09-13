@@ -123,6 +123,7 @@ EOF
     docker run --rm \
       --user "$(id -u):$(id -g)" \
       -e HOME=/zap/wrk/home \
+      --workdir /zap/wrk \
       --network devsecops-runtime \
       -v "$PWD/reports/zap:/zap/wrk:rw" \
       "$ZAP_IMAGE" \
