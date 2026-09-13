@@ -97,17 +97,69 @@ EOF
     health 18082
     curl -fsS http://127.0.0.1:8082/api/hello > reports/staging-smoke.json
     ;;
-  dast)
-    mkdir -p reports/zap
-    # ZAP needs write access to its mounted report directory; match the host uid.
+  # dast)
+    # mkdir -p reports/zap
+    # # ZAP needs write access to its mounted report directory; match the host uid.
+    # set +e
+    # docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp \
+    #   --network devsecops-runtime -v "$PWD/reports/zap:/zap/wrk:rw" \
+    #   "$ZAP_IMAGE" zap-baseline.py -t http://devsecops-staging:8080/ \
+    #   -J zap.json -r zap.html -m 1
+    # rc=$?
+    # set -e
+    # if [[ "$rc" -gt 2 ]]; then echo 'ZAP execution failed; promotion blocked'; exit "$rc"; fi
+    # python3 scripts/zap-gate.py reports/zap/zap.json
+    # ;;
+
+    dast)
+    mkdir -p reports/zap/home
+
+    # Remove previous reports so a failed scan cannot reuse stale results.
+    rm -f reports/zap/zap.json \
+          reports/zap/zap.html \
+          reports/zap-summary.json
+
     set +e
-    docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp \
-      --network devsecops-runtime -v "$PWD/reports/zap:/zap/wrk:rw" \
-      "$ZAP_IMAGE" zap-baseline.py -t http://devsecops-staging:8080/ \
-      -J zap.json -r zap.html -m 1
+    docker run --rm \
+      --user "$(id -u):$(id -g)" \
+      -e HOME=/zap/wrk/home \
+      --network devsecops-runtime \
+      -v "$PWD/reports/zap:/zap/wrk:rw" \
+      "$ZAP_IMAGE" \
+      zap-baseline.py \
+      --autooff \
+      -d \
+      -t http://devsecops-staging:8080/ \
+      -m 1 \
+      -T 5 \
+      -z "-dir /zap/wrk/home" \
+      -J zap.json \
+      -r zap.html \
+      > reports/zap/console.log 2>&1
     rc=$?
     set -e
-    if [[ "$rc" -gt 2 ]]; then echo 'ZAP execution failed; promotion blocked'; exit "$rc"; fi
+
+    cat reports/zap/console.log
+
+    # A configured FAIL or an execution error must block promotion.
+    case "$rc" in
+      0|2)
+        ;;
+      *)
+        echo "ZAP failed with exit code $rc; promotion blocked."
+        if [[ -f reports/zap/home/zap.log ]]; then
+          tail -n 100 reports/zap/home/zap.log
+        fi
+        exit "$rc"
+        ;;
+    esac
+
+    if [[ ! -s reports/zap/zap.json ]]; then
+      echo "ZAP produced no JSON report; promotion blocked."
+      exit 3
+    fi
+
+    # Validate the report and block HIGH/MEDIUM findings.
     python3 scripts/zap-gate.py reports/zap/zap.json
     ;;
   production)
