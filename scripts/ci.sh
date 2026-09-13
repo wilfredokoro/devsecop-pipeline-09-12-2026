@@ -187,4 +187,17 @@ EOF
     rm -rf .work
     ;;
   *) echo 'Unknown stage' >&2; exit 2 ;;
+        *)
+        echo "ZAP failed with exit code $rc; promotion blocked."
+
+        if [[ -f reports/zap/zap.out ]]; then
+          tail -n 100 reports/zap/zap.out
+        fi
+
+        if [[ -f reports/zap/home/zap.log ]]; then
+          tail -n 100 reports/zap/home/zap.log
+        fi
+
+        exit "$rc"
+        ;;
 esac
